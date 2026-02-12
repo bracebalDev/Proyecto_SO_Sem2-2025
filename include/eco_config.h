@@ -1,5 +1,6 @@
-#ifndef ECO_FLOW_H
-#define ECO_FLOW_H
+/* Archivo: include/eco_config.h */
+#ifndef ECO_CONFIG_H
+#define ECO_CONFIG_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,77 +9,60 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <time.h>
+#include <errno.h>
 
-// --- Constantes del Sistema ---
+// --- Parametrización del Enunciado ---
 #define NUM_VALVULAS 10
-#define HORA_INICIO 6
-#define HORA_FIN 18
-#define DURACION_SIMULACION_SEG 30 // Duración total de la simulación en tiempo real
-#define MAX_USUARIOS_DIA 250
-#define LITROS_CRITICOS 500
+#define DURACION_SIMULACION 30     // Segundos reales (Representan 12 horas: 06:00-18:00)
+#define MAX_SOLICITUDES_DIA 250
+#define LITROS_CRITICOS 500.0
+#define UMBRAL_PROB_RESERVA 50     // 50% probabilidad
+#define TASA_REFRESCO_UI 150000    // 150ms
 
-// Códigos de colores ANSI para la consola
-#define COLOR_RESET   "\033[0m"
-#define COLOR_RED     "\033[31m"
-#define COLOR_GREEN   "\033[32m"
-#define COLOR_YELLOW  "\033[33m"
-#define COLOR_BLUE    "\033[34m"
-#define COLOR_CYAN    "\033[36m"
-#define COLOR_BOLD    "\033[1m"
+// --- Códigos ANSI para Visualización ---
+#define ANSI_RESET   "\033[0m"
+#define ANSI_RED     "\033[31m"      // Ocupado / Error
+#define ANSI_GREEN   "\033[32m"      // Libre / Éxito
+#define ANSI_YELLOW  "\033[33m"      // Lectura / Advertencia
+#define ANSI_BLUE    "\033[34m"      // Títulos
+#define ANSI_CYAN    "\033[36m"      // Información
+#define ANSI_BOLD    "\033[1m"
 
-// --- Estructuras de Datos ---
+// --- Estructuras de Datos (Modelos) ---
 
-// Estado de una Válvula (Nodo de Flujo)
+// Modelo de Válvula (Recurso Compartido)
 typedef struct {
-    int id;
-    int usuario_id_actual;    // -1 si está libre
-    bool ocupado;             // true si hay una reserva activa (escritura)
-    int lectores_activos;     // Cantidad de usuarios consultando presión
-    sem_t sem_acceso_db;      // Semáforo para Exclusión Mutua (Escritura)
-    sem_t sem_lectores;       // Semáforo para proteger el contador de lectores
-    pthread_mutex_t mutex_estado; // Mutex simple para cambios rápidos de estado visual
-} Valvula;
+    int id_nodo;
+    int usuario_actual;       // ID del hilo dueño (-1 si libre)
+    bool es_critico;          // Flag de uso exclusivo (Escritura)
+    int lectores_activos;     // Contador para lectores concurrentes
+    
+    // Herramientas de Sincronización
+    sem_t sem_exclusion;      // Semáforo Binario (Controla acceso a DB/Escritura)
+    sem_t sem_lectores;       // Semáforo Binario (Protege variable 'lectores_activos')
+    pthread_mutex_t mtx_ui;   // Mutex rápido para coherencia visual instantánea
+} NodoFlujo;
 
-// Estadísticas Globales (Protegidas por Mutex)
+// Estadísticas Globales (Monitor)
 typedef struct {
-    double total_m3_procesados;
+    double m3_total_procesados;
     int amonestaciones_digitales;
-    int consumos_criticos;
-    int consumos_estandar;
-    int usuarios_atendidos;
-    int intentos_fallidos_reserva;
-    pthread_mutex_t mutex_stats;
-} Estadisticas;
+    int consumos_criticos;    // > 500L
+    int consumos_estandar;    // <= 500L
+    int eficiencia_asignaciones; // Total atendidos
+    int tiempo_espera_acumulado; // Simulado
+    pthread_mutex_t mtx_stats;
+} MetricasEco;
 
-// Argumentos para los hilos de usuario
+// Contexto para pasar argumentos a hilos
 typedef struct {
-    int id_usuario;
+    int uid;
     int tipo_usuario; // 0: Residencial, 1: Industrial
-} InfoUsuario;
+} ContextoAgente;
 
-// --- Variables Globales Externas ---
-extern Valvula sistema_valvulas[NUM_VALVULAS];
-extern Estadisticas stats_globales;
-extern bool simulacion_activa;
-
-// --- Prototipos de Funciones ---
-
-// sincronizacion.c
-void inicializar_sistema();
-void destruir_sistema();
-bool solicitar_reserva(int id_usuario, int id_valvula);
-void liberar_reserva(int id_usuario, int id_valvula, double litros_consumidos);
-void consultar_presion(int id_usuario, int id_valvula);
-void cancelar_solicitud(int id_usuario, int id_valvula);
-void registrar_amonestacion();
-
-// comportamiento.c
-void* hilo_usuario(void* arg);
-void* hilo_auditor(void* arg);
-void* hilo_interfaz(void* arg);
-
-// Utilidad
-double generar_litros_consumo(int tipo_usuario);
-int obtener_valvula_aleatoria();
+// --- Variables Globales (Externas) ---
+extern NodoFlujo g_nodos[NUM_VALVULAS];
+extern MetricasEco g_metricas;
+extern volatile bool g_sistema_activo;
 
 #endif
