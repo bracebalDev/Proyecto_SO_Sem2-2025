@@ -1,50 +1,60 @@
-# --- Makefile ---
-# Autor: María Laura Gutiérrez (V-), Rebeca Blanco (V-), Andrés Crespo (V-), Brayan Ceballos
+# --- Makefile — Eco-Flow 2026 ---
+# Autores: María Laura Gutiérrez, Rebeca Blanco, Andrés Crespo, Brayan Ceballos
 # Fecha: 9 de Marzo de 2026
+#
+# Uso:
+#   make          → Compila el proyecto
+#   make run      → Compila y ejecuta
+#   make clean    → Elimina obj/ y el ejecutable (no quedan .o sueltos)
+#   make DEBUG=1  → Compila con símbolos de depuración (-g)
 
-# Nombre del ejecutable final
-TARGET = eco_flow_app
+TARGET  = eco_flow_app
+CC      = gcc
 
-# Compilador y banderas
-CC = gcc
-# -I./include: Busca archivos .h en la carpeta include
-# -pthread: Necesario para hilos POSIX (forks/threads)
-CFLAGS = -Wall -Wextra -I./include -pthread
+# Flags base: warnings estrictos, cabeceras en include/, soporte pthreads
+CFLAGS  = -Wall -Wextra -I./include -pthread
+
+# Flag de debug opcional: make DEBUG=1 agrega -g y desactiva optimizaciones
+ifdef DEBUG
+    CFLAGS += -g -O0 -DDEBUG
+else
+    CFLAGS += -O2
+endif
 
 # Directorios
 SRC_DIR = src
 OBJ_DIR = obj
 
-# Encontrar todos los archivos .c en src/
+# Fuentes y objetos (los .o NUNCA van en src/, siempre en obj/)
 SRCS = $(wildcard $(SRC_DIR)/*.c)
-# Convertir nombres .c a .o
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
 
-# Regla principal (lo que pasa cuando escribes 'make')
+# ── Regla principal ─────────────────────────────────────────────────
 all: $(TARGET)
 
-# Enlazado final
+# ── Enlazado ────────────────────────────────────────────────────────
 $(TARGET): $(OBJS)
-	@echo "Enlazando ejecutable: $@"
+	@echo "  [LINK]  $@"
 	$(CC) $(CFLAGS) -o $@ $^
+	@echo "  Listo: ./$@"
 
-# Compilación de objetos individuales
+# ── Compilación de cada .c a su .o dentro de obj/ ───────────────────
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	@echo "Compilando: $<"
+	@echo "  [CC]    $<"
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Crear carpeta de objetos si no existe
+# ── Crear carpeta obj/ si no existe ─────────────────────────────────
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
-# Limpiar archivos generados (make clean)
+# ── Limpiar todo lo generado (make clean) ───────────────────────────
 clean:
-	@echo "Limpiando archivos temporales..."
+	@echo "  [CLEAN] Eliminando obj/ y $(TARGET)..."
 	rm -rf $(OBJ_DIR) $(TARGET)
 
-# Ejecutar el programa (make run)
+# ── Compilar y ejecutar (make run) ──────────────────────────────────
 run: $(TARGET)
-	@echo "--- Ejecutando Eco Flow ---"
+	@echo "--- Ejecutando Eco-Flow 2026 ---"
 	./$(TARGET)
 
 .PHONY: all clean run

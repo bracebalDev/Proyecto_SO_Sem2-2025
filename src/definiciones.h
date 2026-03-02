@@ -14,9 +14,9 @@
 #include <stdbool.h>
 
 // --- Configuración del Sistema Eco-Flow ---
-#define NUM_NODOS 10           //
-#define TOTAL_SOLICITUDES 250   //
-#define HORAS_SIMULACION 12    // De 06:00 a 18:00
+#define NUM_NODOS 10           // Cantidad de válvulas disponibles
+#define TOTAL_SOLICITUDES 250   // Total de solicitudes a realizar (propuestas por el caso base)
+#define HORAS_SIMULACION 12    // De 06:00 a 18:00 (12 horas)
 #define LIMITE_CRITICO 500     // Litros para validación del Auditor
 
 // --- Probabilidades ---
