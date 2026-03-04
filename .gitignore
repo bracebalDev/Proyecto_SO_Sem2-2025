@@ -1,0 +1,11 @@
+# Archivos objeto y ejecutables
+obj/
+*.o
+eco_flow_app
+
+# Reportes generados (no se versionan, se generan al correr)
+*.txt
+
+# Archivos del sistema/editor (opcional pero recomendado)
+.DS_Store
+.vscode/

@@ -10,6 +10,7 @@ typedef struct {
     int    amonestaciones;    /* Cancelaciones inválidas penalizadas      */
     int    entregas_criticas; /* Entregas con litros > LITROS_CRITICOS    */
     int    entregas_estandar; /* Entregas con litros <= LITROS_CRITICOS   */
+    int total_consultas; /*Total consultas realizadas = Tamaño de solicitudes */
 } EstadisticasFlujo;
 
 /* ── Inicialización y destrucción ───────────────────────────────────── */
