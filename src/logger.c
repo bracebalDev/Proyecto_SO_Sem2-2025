@@ -12,14 +12,22 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
+#include <semaphore.h>
 #include <pthread.h>
 
 /* Variables de estado para el log */
 __thread const char* tls_estado_hilo = "INACTIVO";
-const char* global_estado_auditor = "DURMIENDO";
 
-/* Mutex que serializa todos los printf del sistema */
-static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
+/* Estado del auditor protegido por semaforo dedicado (sem_estado_auditor).
+ * Se usa un buffer interno y funciones getter/setter para evitar race
+ * conditions entre el hilo auditor (escritor) y log_evento (lector). */
+static char buf_estado_auditor[64] = "DURMIENDO";
+static sem_t sem_estado_auditor;
+
+/* Semaforo binario que serializa todos los printf del sistema.
+ * Reemplaza al pthread_mutex_t anterior para cumplir con el requisito
+ * del enunciado: sincronizacion exclusivamente con semaforos.          */
+static sem_t sem_log;
 
 /* Momento de inicio de la simulación (capturado en logger_init) */
 static struct timespec t_inicio;
@@ -27,12 +35,20 @@ static struct timespec t_inicio;
 /* ── Funciones públicas */
 
 void logger_init(void) {
-    pthread_mutex_init(&log_mutex, NULL);
+    sem_init(&sem_log, 0, 1);
+    sem_init(&sem_estado_auditor, 0, 1);
     clock_gettime(CLOCK_MONOTONIC, &t_inicio);
 }
 
 void logger_close(void) {
-    pthread_mutex_destroy(&log_mutex);
+    sem_destroy(&sem_log);
+    sem_destroy(&sem_estado_auditor);
+}
+
+void logger_set_estado_auditor(const char *estado) {
+    sem_wait(&sem_estado_auditor);
+    snprintf(buf_estado_auditor, sizeof(buf_estado_auditor), "%s", estado);
+    sem_post(&sem_estado_auditor);
 }
 
 double logger_segundos_transcurridos(void) {
@@ -71,15 +87,21 @@ void log_evento(const char *color, const char *fmt, ...) {
     int hora, minuto;
     segundos_a_hora_simulada(seg, &hora, &minuto);
 
-    pthread_mutex_lock(&log_mutex);
+    sem_wait(&sem_log);
 
     char valvulas_str[NUM_VALVULAS + 3];
     nucleo_get_estado_valvulas_str(valvulas_str);
 
+    /* Snapshot thread-safe del estado del auditor */
+    char estado_aud[64];
+    sem_wait(&sem_estado_auditor);
+    snprintf(estado_aud, sizeof(estado_aud), "%s", buf_estado_auditor);
+    sem_post(&sem_estado_auditor);
+
     /* Prefijo estricto de concurrencia */
     printf("%s[%02d:%02d] [TID: %lu] [%-11s] [%-18s] %s ", color, hora, minuto,
            (unsigned long)pthread_self(),
-           tls_estado_hilo, global_estado_auditor, valvulas_str);
+           tls_estado_hilo, estado_aud, valvulas_str);
 
     /* Mensaje del llamador */
     va_list args;
@@ -90,5 +112,11 @@ void log_evento(const char *color, const char *fmt, ...) {
     printf("%s\n", COL_RESET);
     fflush(stdout);
 
-    pthread_mutex_unlock(&log_mutex);
+    sem_post(&sem_log);
+}
+
+void logger_reiniciar_reloj(void) {
+    sem_wait(&sem_log);
+    clock_gettime(CLOCK_MONOTONIC, &t_inicio);
+    sem_post(&sem_log);
 }
