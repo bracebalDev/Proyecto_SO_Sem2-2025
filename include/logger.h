@@ -18,30 +18,35 @@
 /* ── API del Logger ─────────────────────────────────────────────────── */
 
 /**
- * Inicializa el mutex interno del logger.
+ * Inicializa los semaforos internos del logger.
  * Debe llamarse UNA vez desde main() antes de crear cualquier hilo.
  */
 void logger_init(void);
 
 /**
- * Destruye el mutex del logger.
+ * Destruye los semaforos del logger.
  * Debe llamarse UNA vez desde main() tras hacer join a todos los hilos.
  */
 void logger_close(void);
 
 /**
  * Imprime un mensaje prefijado con el timestamp simulado [HH:MM].
- * Thread-safe: serializado internamente con mutex.
+ * Thread-safe: serializado internamente con semaforo.
  *
  * @param color  Macro de color ANSI (p.ej. COL_GREEN). Usa "" para sin color.
- * @param fmt    Formato printf estándar.
+ * @param fmt    Formato printf estandar.
  * @param ...    Argumentos de formato.
  */
 void log_evento(const char *color, const char *fmt, ...);
 
 /* ── Variables de Estado Transparentes ──────────────────────────────── */
 extern __thread const char* tls_estado_hilo;
-extern const char* global_estado_auditor;
+
+/**
+ * Actualiza el estado del auditor de forma thread-safe (protegido por semaforo).
+ * Reemplaza la escritura directa a global_estado_auditor.
+ */
+void logger_set_estado_auditor(const char *estado);
 
 /**
  * Devuelve el timestamp simulado en segundos transcurridos desde
@@ -50,5 +55,8 @@ extern const char* global_estado_auditor;
  * 1 hora simulada = DURACION_SIMULACION/12 segundos reales.
  */
 double logger_segundos_transcurridos(void);
+
+/** Reinicia el cronómetro interno del logger para iniciar un nuevo día simulado */
+void logger_reiniciar_reloj(void);
 
 #endif /* LOGGER_H */
