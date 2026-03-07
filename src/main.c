@@ -27,6 +27,8 @@
 #include <sys/resource.h> /* Necesario para getrusage (reporte de Hardware) */
 #endif
 
+bool modo_debug = false; // Por defecto desactivado
+
 /* ── Variable global de control de apagado limpio ──────────────────────
  * Cuando se pone en false, los hilos de servicio (auditor, telemetría)
  * terminan sus bucles por sí solos, sin necesidad de pthread_cancel.*/
@@ -44,6 +46,7 @@ static void mostrar_menu(void) {
     printf("\n╔══════════════════════════════════════════════════╗\n");
     printf("║     ECO-FLOW 2026 ─ Gestión Hídrica Inteligente  ║\n");
     printf("╠══════════════════════════════════════════════════╣\n");
+    printf("║  0. Ver Monitoreo en Tiempo Real:   [%s]         ║\n", modo_debug ? "SI" : "NO");
     printf("║  1. Caso Fácil   ─    50 solicitudes/día         ║\n");
     printf("║  2. Caso Mediano ─   150 solicitudes/día         ║\n");
     printf("║  3. Caso Base    ─   250 solicitudes/día [Base]  ║\n");
@@ -145,15 +148,27 @@ int main(void) {
 
         /* Selección de Escenario */
         switch (opcion) {
+            case 0: // Opción oculta de Debugger
+                 modo_debug = !modo_debug; // Si era true pasa a false, y viceversa
+               printf("\n[SISTEMA] Monitoreo Detallado: %s\n", modo_debug ? "ACTIVADO" : "DESACTIVADO");
+                continue; // Vuelve al menú para mostrar el cambio
             case 1: num_solicitudes = 50;                  break;
             case 2: num_solicitudes = 150;                 break;
             case 3: num_solicitudes = MAX_SOLICITUDES_DIA; break;
             case 4: num_solicitudes = 1000;                break;
             case 5:
                 printf("\n  Ingrese el número exacto de solicitudes (N): ");
-                if (scanf("%d", &num_solicitudes) != 1) num_solicitudes = MAX_SOLICITUDES_DIA;
+    
+                // Si la lectura falla (el usuario coloca una letra o símbolo), se muestra un mensaje de error y se limpia el buffer para evitar un bucle infinito.
+                if (scanf("%d", &num_solicitudes) != 1) { 
+                    printf(COL_RED "\n[ERROR DE VALIDACIÓN]  no es un número válido.\n" COL_RESET);
+                    while (getchar() != '\n'); 
+                    printf("Volviendo al menú principal...\n");
+    
+                    continue; 
+                }
                 limpiar_buffer();
-                break;
+                 break;
             case 6:
                 printf("Saliendo...\n");
                 return 0;
@@ -187,7 +202,10 @@ int main(void) {
             perror("Error fatal: No se pudo crear el hilo Auditor");
             exit(EXIT_FAILURE);
         }
-        log_evento(COL_MAGENTA, "SISTEMA  | Auditor lanzado   [TID: %lu]", (unsigned long)auditor);
+        // --- CONTROL DE LOGS ---
+        if (modo_debug) {
+            log_evento(COL_MAGENTA, "SISTEMA  | Auditor lanzado   [TID: %lu]", (unsigned long)auditor);
+        }
 
         /* 2. Telemetría: Reporta estado de válvulas periódicamente */
         pthread_t telemetria;
@@ -195,7 +213,10 @@ int main(void) {
             perror("Error fatal: No se pudo crear el hilo Telemetría");
             exit(EXIT_FAILURE);
         }
-        log_evento(COL_BLUE, "SISTEMA  | Telemetría lanzada [TID: %lu]", (unsigned long)telemetria);
+        // --- CONTROL DE LOGS ---
+        if (modo_debug) {
+            log_evento(COL_BLUE, "SISTEMA  | Telemetría lanzada [TID: %lu]", (unsigned long)telemetria);
+        }
 
         /* ── FASE 3: Creación de Hilos de Usuario (Carga de Trabajo) ── */
         /* Variable para acumular cuánta gente entró realmente en todo el mes */
@@ -207,12 +228,19 @@ int main(void) {
         printf("=======================================================\n" COL_RESET);
 
         /* ── Simulación de 30 Días ── */
+        
         for (int dia = 1; dia <= 30; dia++) {
 
             /* ── Reiniciar el reloj para que el Logger vuelva a las 06:00 ── */
             logger_reiniciar_reloj();
 
+            /* el if de modo_debug se pone aquí para que imprima el mensaje de inicio de día solo una vez por
+            día, no por cada solicitud. Así se evita saturar la consola con mensajes repetitivos en modo
+            debug, pero aún se tiene un indicador claro del avance diario.*/ 
+            
+            if (modo_debug) {
             printf(COL_CYAN "\n🌅 --- INICIANDO DÍA %d DE 30 --- 🌅\n" COL_RESET, dia);
+            }
 
             /* Variabilidad Diaria: El tráfico varía entre el 60% y el 100% del tope elegido */
             int min_solicitudes = (int)(num_solicitudes * 0.60);
@@ -272,9 +300,11 @@ int main(void) {
             free(usuarios);
             free(args_array);
         }
-
-        usleep(500000); /* Pausa para que el auditor procese las últimas señales */
+     
+        //usleep(500000); /* Pausa para que el auditor procese las últimas señales */
         
+        // Si el monitoreo está apagado, esperamos casi nada (0.01s). Si está encendido, esperamos 0.5s.
+        usleep(modo_debug ? 500000 : 10000);
         /* ── FASE 5: Apagado Limpio (sin pthread_cancel) ──
          *
          * PROTOCOLO DE APAGADO:

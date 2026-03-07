@@ -83,6 +83,11 @@ static void segundos_a_hora_simulada(double seg_reales,
 }
 
 void log_evento(const char *color, const char *fmt, ...) {
+
+    // Si el modo debug está desactivado, no hacemos nada (evitamos la sobrecarga de calcular tiempos y estados)
+    extern bool modo_debug; // Traemos la variable del main
+    if (!modo_debug) return; // Salida temprana para modo no-debug
+
     double seg = logger_segundos_transcurridos();
     int hora, minuto;
     segundos_a_hora_simulada(seg, &hora, &minuto);
