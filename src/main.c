@@ -27,7 +27,7 @@
 #include <sys/resource.h> /* Necesario para getrusage (reporte de Hardware) */
 #endif
 
-bool modo_debug = false; // Por defecto desactivado
+bool modo_debug = true; // Por defecto desactivado
 
 /* ── Variable global de control de apagado limpio ──────────────────────
  * Cuando se pone en false, los hilos de servicio (auditor, telemetría)

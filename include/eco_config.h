@@ -14,7 +14,7 @@
 // --- Parametros ---
 #define NUM_VALVULAS 10
 #define DURACION_SIMULACION 3      // Segundos reales (Representan 12 horas: 06:00-18:00)
-#define MAX_SOLICITUDES_DIA 250
+#define MAX_SOLICITUDES_DIA 250 
 #define LITROS_CRITICOS 500.0
 #define TASA_REFRESCO_UI 500000    // 500ms de refresco para telemetria
 #define TAM_COLA_AUDITOR 50        // Buffer tamano Auditor

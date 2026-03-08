@@ -10,8 +10,7 @@
 extern __thread const char *tls_estado_hilo; 
 
 /* [Estructura Privada: NodoFlujo]
- * Se mantiene aquí para que nucleo_flujo.c la vea, pero NO debe estar 
- * redefinida en el .c.
+ * Se mantiene aquí para que nucleo_flujo.c la vea.
  */
 typedef struct {
     _Atomic(bool) ocupado;
