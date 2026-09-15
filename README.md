@@ -8,10 +8,10 @@
 
 | Nombre | C.I. |
 |---|---|
-| Derginette Blanco | 22.514.703 |
-| María Laura Gutiérrez | 23.424.597 |
-| Brayan Ceballos | 29.569.937 |
-| Andrés Crespo | 31.259.533 |
+| Derginette Blanco |
+| María Laura Gutiérrez |
+| Brayan Ceballos |
+| Andrés Crespo |
 
 ---
 
