@@ -6,7 +6,7 @@
 
 ## 👥 Autores
 
-| Nombre | C.I. |
+| Nombre |
 |---|---|
 | Derginette Blanco |
 | María Laura Gutiérrez |
